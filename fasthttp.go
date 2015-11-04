@@ -5,11 +5,11 @@ import (
 	"compress/gzip"
 	"reflect"
 	"github.com/AlasdairF/Conv"
+	"sync"
 )
 
 const (
 	bestLength  = 10000
-	bestLengthMinus1  = bestLength - 1
 )
 
 type ResponseWriter interface {
@@ -106,13 +106,13 @@ func (b *Plain) WriteAll(a ...interface{}) {
 	for _, p := range a {
 		switch reflect.TypeOf(p).Kind() {
 			case reflect.String:
-				b.ResponseWriter.WriteString(reflect.ValueOf(p).String())
+				b.WriteString(reflect.ValueOf(p).String())
 			case reflect.Slice:
-				b.ResponseWriter.Write(reflect.ValueOf(p).Bytes())
+				b.Write(reflect.ValueOf(p).Bytes())
 			case reflect.Int: case reflect.Int8: case reflect.Int16: case reflect.Int32: case reflect.Int64:
-				b.ResponseWriter.Write(conv.Bytes(int(reflect.ValueOf(p).Int())))
+				b.Write(conv.Bytes(int(reflect.ValueOf(p).Int())))
 			case reflect.Uint: case reflect.Uint8: case reflect.Uint16: case reflect.Uint32: case reflect.Uint64:
-				b.ResponseWriter.Write(conv.Bytes(int(reflect.ValueOf(p).Uint())))
+				b.Write(conv.Bytes(int(reflect.ValueOf(p).Uint())))
 		}
 	}
 }
@@ -122,6 +122,7 @@ func (b *Plain) Close() (err error) {
 		_, err = b.ResponseWriter.Write(b.data[0:b.cursor])
 		b.cursor = 0
 	}
+	b.ResponseWriter = nil
 	return
 }
 
@@ -192,17 +193,17 @@ func (b *Gzip) WriteByte(p byte) error {
 	return err
 }
 
-func (b *Plain) WriteAll(a ...interface{}) {
+func (b *Gzip) WriteAll(a ...interface{}) {
 	for _, p := range a {
 		switch reflect.TypeOf(p).Kind() {
 			case reflect.String:
-				b.gz.WriteString(reflect.ValueOf(p).String())
+				b.WriteString(reflect.ValueOf(p).String())
 			case reflect.Slice:
-				b.gz.Write(reflect.ValueOf(p).Bytes())
+				b.Write(reflect.ValueOf(p).Bytes())
 			case reflect.Int: case reflect.Int8: case reflect.Int16: case reflect.Int32: case reflect.Int64:
-				b.gz.Write(conv.Bytes(int(reflect.ValueOf(p).Int())))
+				b.Write(conv.Bytes(int(reflect.ValueOf(p).Int())))
 			case reflect.Uint: case reflect.Uint8: case reflect.Uint16: case reflect.Uint32: case reflect.Uint64:
-				b.gz.Write(conv.Bytes(int(reflect.ValueOf(p).Uint())))
+				b.Write(conv.Bytes(int(reflect.ValueOf(p).Uint())))
 		}
 	}
 }
@@ -212,6 +213,8 @@ func (b *Gzip) Close() (err error) {
 		_, err = b.gz.Write(b.data[0:b.cursor])
 		b.cursor = 0
 	}
-	gz.Close()
+	b.gz.Close()
+	b.gz = nil
+	b.ResponseWriter = nil
 	return
 }
