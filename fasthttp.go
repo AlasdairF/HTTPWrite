@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"reflect"
 	"github.com/AlasdairF/Conv"
-	"sync"
 )
 
 const (
@@ -30,7 +29,7 @@ type Plain struct {
 
 type Gzip struct {
 	ResponseWriter http.ResponseWriter
-	gz gzip.Writer
+	gz *gzip.Writer
 	data [bestLength]byte
 	cursor int
 }
