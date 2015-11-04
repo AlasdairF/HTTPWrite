@@ -125,7 +125,7 @@ func (b *Plain) Close() (err error) {
 	return
 }
 
-func New(w http.ResponseWriter) *Gzip {
+func NewGzip(w http.ResponseWriter) *Gzip {
 	return &Gzip{ResponseWriter: w, gz: gzip.NewWriter(w)}
 }
 
