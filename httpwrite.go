@@ -1,14 +1,15 @@
-package fasthttp
+package httpwrite
 
 import (
+	"github.com/AlasdairF/Pool"
+	"github.com/AlasdairF/Conv"
 	"net/http"
 	"compress/gzip"
-	"reflect"
-	"github.com/AlasdairF/Conv"
+	"reflect"	
 )
 
 const (
-	bestLength  = 10000
+	bestLength = pool.Size
 )
 
 type ResponseWriter interface {
@@ -23,19 +24,19 @@ type ResponseWriter interface {
 
 type Plain struct {
 	ResponseWriter http.ResponseWriter
-	data [bestLength]byte
+	data []byte
 	cursor int
 }
 
 type Gzip struct {
 	ResponseWriter http.ResponseWriter
 	gz *gzip.Writer
-	data [bestLength]byte
+	data []byte
 	cursor int
 }
 
 func New(w http.ResponseWriter) *Plain {
-	return &Plain{ResponseWriter: w}
+	return &Plain{ResponseWriter: w, data: pool.Get(bufferLen)}
 }
 
 func (b *Plain) Header() http.Header {
@@ -122,11 +123,12 @@ func (b *Plain) Close() (err error) {
 		b.cursor = 0
 	}
 	b.ResponseWriter = nil
+	pool.Return(b.data)
 	return
 }
 
 func NewGzip(w http.ResponseWriter) *Gzip {
-	return &Gzip{ResponseWriter: w, gz: gzip.NewWriter(w)}
+	return &Gzip{ResponseWriter: w, gz: gzip.NewWriter(w), data: pool.Get(bufferLen)}
 }
 
 func (b *Gzip) Header() http.Header {
@@ -215,5 +217,6 @@ func (b *Gzip) Close() (err error) {
 	b.gz.Close()
 	b.gz = nil
 	b.ResponseWriter = nil
+	pool.Return(b.data)
 	return
 }
